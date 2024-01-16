@@ -8,17 +8,17 @@ import (
 	"time"
 )
 
-type Builder struct {
+type SessionLoginBuilder struct {
 	ignorePaths    mapset.Set[string]
 	expiration     int
 	updateInterval int64
 }
 
-// NewBuilder
+// NewSessionLoginBuilder
 // expiration: session 过期时间
 // updateInterval: 每次刷新session 的时间间隔
-func NewBuilder(expiration time.Duration, updateInterval time.Duration) *Builder {
-	return &Builder{
+func NewSessionLoginBuilder(expiration time.Duration, updateInterval time.Duration) *SessionLoginBuilder {
+	return &SessionLoginBuilder{
 		ignorePaths:    mapset.NewSet[string](),
 		expiration:     int(expiration.Seconds()),
 		updateInterval: updateInterval.Milliseconds(),
@@ -26,12 +26,12 @@ func NewBuilder(expiration time.Duration, updateInterval time.Duration) *Builder
 
 }
 
-func (b *Builder) IgnorePath(path string) *Builder {
+func (b *SessionLoginBuilder) IgnorePath(path string) *SessionLoginBuilder {
 	b.ignorePaths.Add(path)
 	return b
 }
 
-func (b *Builder) Build() gin.HandlerFunc {
+func (b *SessionLoginBuilder) Build() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 
 		// 不需要登录验证

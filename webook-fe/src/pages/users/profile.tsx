@@ -4,9 +4,8 @@ import axios from "@/axios/axios";
 function Page() {
     type Profile = {
         Email: string
-        Phone: string
     }
-    let p: Profile = {Email: "", Phone: ""}
+    let p: Profile = {Email: ""}
     const [data, setData] = useState<Profile>(p)
     const [isLoading, setLoading] = useState(false)
 
@@ -26,7 +25,6 @@ function Page() {
     return (
         <div>
             <h1>{data.Email}</h1>
-            <h1>{data.Phone}</h1>
             {/*<p>{data.bio}</p>*/}
         </div>
     )

@@ -199,6 +199,7 @@ func (u *UserHandler) LoginJWT(ctx *gin.Context) {
 		return
 	}
 	ctx.Header("x-jwt-token", tokenStr)
+	ctx.String(http.StatusOK, "登录成功")
 }
 
 func (u *UserHandler) ProfileJWT(ctx *gin.Context) {

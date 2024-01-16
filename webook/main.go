@@ -8,8 +8,6 @@ import (
 	"gitee.com/geekbang/basic-go/webook/internal/web"
 	"gitee.com/geekbang/basic-go/webook/internal/web/middlewares"
 	"github.com/gin-contrib/cors"
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -77,12 +75,18 @@ func initWebServer() *gin.Engine {
 		MaxAge:           12 * time.Hour,                            // preflight响应 过期时间
 	}))
 
-	store, _ := redis.NewStore(10, "tcp", "localhost:6379", "",
-		[]byte("pY8tX3vY7aT8nK2nD6lO9jR4pE5aN4gI"), []byte("rM8eL5rB7pC1fZ4tZ3eT1fM8cS5kK7lD"))
-	engine.Use(sessions.Sessions("mysession", store))
+	// session + cookie 登录校验
+	//store, _ := redis.NewStore(10, "tcp", "localhost:6379", "",
+	//	[]byte("pY8tX3vY7aT8nK2nD6lO9jR4pE5aN4gI"), []byte("rM8eL5rB7pC1fZ4tZ3eT1fM8cS5kK7lD"))
+	//engine.Use(sessions.Sessions("mysession", store))
+	//
+	//engine.Use(middlewares.NewSessionLoginBuilder(time.Minute, time.Second*10).
+	//	IgnorePath("/users/signup").
+	//	IgnorePath("/users/login").Build())
 
-	engine.Use(middlewares.NewBuilder(time.Minute, time.Second*10).
+	engine.Use(middlewares.NewJWTLoginMiddlewareBuilder().
 		IgnorePath("/users/signup").
 		IgnorePath("/users/login").Build())
+
 	return engine
 }
