@@ -1,0 +1,23 @@
+version: '3.0'
+services:
+  mysql8:
+    image: mysql:8.0.29
+    restart: always
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      #      设置初始化脚本， 容器创建后， 将执行 ./script/mysql/ 所有 .sql文件初始化数据库
+      - ./script/mysql/:/docker-entrypoint-initdb.d/
+      #  数据持久化
+    #      - ./datadir/mysql:/var/lib/mysql
+    ports:
+      #      注意这里我映射为了 13316 端口
+      - "13316:3306"
+  redis:
+    image: bitnami/redis:7.0.14
+    environment:
+      # ALLOW_EMPTY_PASSWORD is recommended only for development.
+      - ALLOW_EMPTY_PASSWORD=yes
+    ports:
+      - '6379:6379'
