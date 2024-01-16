@@ -1,4 +1,4 @@
-package checkLogin
+package middlewares
 
 import (
 	mapset "github.com/deckarep/golang-set/v2"

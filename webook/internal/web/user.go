@@ -3,10 +3,12 @@ package web
 import (
 	"gitee.com/geekbang/basic-go/webook/internal/domain"
 	"gitee.com/geekbang/basic-go/webook/internal/service"
-	"gitee.com/geekbang/basic-go/webook/pkg/ginx/middlewares/checkLogin"
+	"gitee.com/geekbang/basic-go/webook/internal/web/middlewares"
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"net/http"
+	"time"
 )
 
 type UserHandler struct {
@@ -35,10 +37,11 @@ func (u *UserHandler) RegisterHandlers(engine *gin.Engine) {
 	ug := engine.Group("/users")
 
 	ug.POST("/signup", u.SignUp)
-	ug.POST("/login", u.Login)
-	ug.GET("/profile", u.Profile)
-	//ug.GET("/profile", u.ProfileJWT)
-	//ug.POST("/login", u.LoginJWT)
+	//ug.POST("/login", u.Login)
+	//ug.GET("/profile", u.Profile)
+
+	ug.POST("/login", u.LoginJWT)
+	ug.GET("/profile", u.ProfileJWT)
 	//ug.POST("/edit", u.Edit)
 
 }
@@ -128,7 +131,7 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 		return
 	}
 
-	err = checkLogin.SetUserId(ctx, user.Id, 60)
+	err = middlewares.SetUserId(ctx, user.Id, 60)
 	if err != nil {
 		ctx.String(http.StatusOK, "系统错误")
 		return
@@ -142,7 +145,7 @@ func (u *UserHandler) Profile(ctx *gin.Context) {
 		Email string `json:"email"`
 	}
 
-	id, ok := checkLogin.GetUserId(ctx).(int64)
+	id, ok := middlewares.GetUserId(ctx).(int64)
 
 	if !ok {
 		ctx.String(http.StatusOK, "系统错误")
@@ -150,6 +153,67 @@ func (u *UserHandler) Profile(ctx *gin.Context) {
 	}
 
 	user, err := u.svc.Profile(ctx, id)
+	if err != nil {
+		// 按照道理来说，这边 id 对应的数据肯定存在，所以要是没找到，
+		// 那就说明是系统出了问题。
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+	ctx.JSON(http.StatusOK, Resp{Email: user.Email})
+
+}
+
+func (u *UserHandler) LoginJWT(ctx *gin.Context) {
+	type Req struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	var req Req
+	err := ctx.Bind(&req)
+	if err != nil {
+		return
+	}
+
+	user, err := u.svc.Login(ctx, domain.User{Email: req.Email, Password: req.Password})
+
+	if err == service.ErrInvalidUserOrPassword {
+		ctx.String(http.StatusOK, "邮箱或者密码错误")
+		return
+	}
+
+	if err != nil {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, middlewares.UserClaims{
+		Id: user.Id,
+		RegisteredClaims: jwt.RegisteredClaims{
+			// 演示目的设置为一分钟过期
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
+		},
+	})
+	tokenStr, err := token.SignedString(middlewares.JWTKey)
+	if err != nil {
+		ctx.String(http.StatusOK, "系统异常")
+		return
+	}
+	ctx.Header("x-jwt-token", tokenStr)
+}
+
+func (u *UserHandler) ProfileJWT(ctx *gin.Context) {
+	type Resp struct {
+		Email string `json:"email"`
+	}
+
+	value, exist := ctx.Get(middlewares.KeyUserClaims)
+	token, ok := value.(middlewares.UserClaims)
+	if !exist || !ok {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+
+	user, err := u.svc.Profile(ctx, token.Id)
 	if err != nil {
 		// 按照道理来说，这边 id 对应的数据肯定存在，所以要是没找到，
 		// 那就说明是系统出了问题。
