@@ -6,7 +6,8 @@ import "github.com/golang-jwt/jwt/v5"
 
 type UserClaims struct {
 	// 我们只需要放一个 user id 就可以了
-	Id int64
+	Id        int64
+	UserAgent string
 	jwt.RegisteredClaims
 }
 

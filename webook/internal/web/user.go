@@ -187,7 +187,8 @@ func (u *UserHandler) LoginJWT(ctx *gin.Context) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, middlewares.UserClaims{
-		Id: user.Id,
+		Id:        user.Id,
+		UserAgent: ctx.Request.UserAgent(),
 		RegisteredClaims: jwt.RegisteredClaims{
 			// 演示目的设置为一分钟过期
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
