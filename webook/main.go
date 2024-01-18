@@ -7,8 +7,13 @@ import (
 	"gitee.com/geekbang/basic-go/webook/internal/service"
 	"gitee.com/geekbang/basic-go/webook/internal/web"
 	"gitee.com/geekbang/basic-go/webook/internal/web/middlewares"
+	ratelimit2 "gitee.com/geekbang/basic-go/webook/pkg/ginx/middlewares/ratelimit"
+	"gitee.com/geekbang/basic-go/webook/pkg/utils/ratelimit"
 	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/memstore"
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"strings"
@@ -16,7 +21,8 @@ import (
 )
 
 func main() {
-	engine := initWebServer()
+	redisCmd := initRedis()
+	engine := initWebServer(redisCmd)
 
 	db := initDB()
 	initUser(db, engine)
@@ -24,6 +30,13 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
+}
+
+func initRedis() redis.Cmdable {
+	return redis.NewClient(&redis.Options{
+		Addr:     "localhost:16379",
+		Password: "", // 没有密码，默认值
+	})
 }
 
 func initUser(db *gorm.DB, engine *gin.Engine) {
@@ -51,7 +64,7 @@ func initDB() *gorm.DB {
 				}
 			}
 	*/
-	db, err := gorm.Open(mysql.Open("root:root@tcp(localhost:13316)/webook"), &gorm.Config{
+	db, err := gorm.Open(mysql.Open("root:root@tcp(localhost:13306)/webook"), &gorm.Config{
 		TranslateError: true,
 	})
 
@@ -63,8 +76,9 @@ func initDB() *gorm.DB {
 	return db
 }
 
-func initWebServer() *gin.Engine {
+func initWebServer(cmd redis.Cmdable) *gin.Engine {
 	engine := gin.Default()
+	// cors 跨域
 	engine.Use(cors.New(cors.Config{
 		AllowOriginFunc: func(origin string) bool { //  哪些来源的url是被允许的
 			return strings.HasPrefix(origin, "http://localhost")
@@ -76,7 +90,7 @@ func initWebServer() *gin.Engine {
 	}))
 
 	// session + cookie 登录校验
-	//store, _ := redis.NewStore(10, "tcp", "localhost:6379", "",
+	//store, _ := redis.NewStore(10, "tcp", "localhost:16379", "",
 	//	[]byte("pY8tX3vY7aT8nK2nD6lO9jR4pE5aN4gI"), []byte("rM8eL5rB7pC1fZ4tZ3eT1fM8cS5kK7lD"))
 	//engine.Use(sessions.Sessions("mysession", store))
 	//
@@ -84,9 +98,17 @@ func initWebServer() *gin.Engine {
 	//	IgnorePath("/users/signup").
 	//	IgnorePath("/users/login").Build())
 
+	// session
+	store := memstore.NewStore([]byte("pY8tX3vY7aT8nK2nD6lO9jR4pE5aN4gI"), []byte("rM8eL5rB7pC1fZ4tZ3eT1fM8cS5kK7lD"))
+	engine.Use(sessions.Sessions("mysession", store))
+
+	// jwt 登录校验
 	engine.Use(middlewares.NewJWTLoginMiddlewareBuilder().
 		IgnorePath("/users/signup").
 		IgnorePath("/users/login").Build())
 
+	// 限流  一分钟 20个 测试用
+	rateLimit := ratelimit.NewRedisSlideWindowLimiter(cmd, time.Minute, 20)
+	engine.Use(ratelimit2.NewBuilder(rateLimit).Build())
 	return engine
 }

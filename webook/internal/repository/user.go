@@ -17,16 +17,16 @@ type UserRepo interface {
 	FindById(ctx context.Context, id int64) (domain.User, error)
 }
 
-type UserRepoImpl struct {
+type userRepoImpl struct {
 	dao dao.UserDao
 }
 
-func (u *UserRepoImpl) FindById(ctx context.Context, id int64) (domain.User, error) {
+func (u *userRepoImpl) FindById(ctx context.Context, id int64) (domain.User, error) {
 	user, err := u.dao.FindById(ctx, id)
 	return u.daoToDomain(user), err
 }
 
-func (u *UserRepoImpl) FindByEmail(ctx context.Context, email string) (domain.User, error) {
+func (u *userRepoImpl) FindByEmail(ctx context.Context, email string) (domain.User, error) {
 	user, err := u.dao.FindByEmail(ctx, email)
 	if err != nil {
 		return domain.User{}, err
@@ -34,18 +34,18 @@ func (u *UserRepoImpl) FindByEmail(ctx context.Context, email string) (domain.Us
 	return u.daoToDomain(user), nil
 }
 
-func (u *UserRepoImpl) Create(ctx context.Context, user domain.User) error {
+func (u *userRepoImpl) Create(ctx context.Context, user domain.User) error {
 	return u.dao.Insert(ctx, u.domainToDao(user))
 }
 
-func (u *UserRepoImpl) domainToDao(user domain.User) dao.User {
+func (u *userRepoImpl) domainToDao(user domain.User) dao.User {
 	return dao.User{
 		Email:    user.Email,
 		Password: user.Password,
 	}
 }
 
-func (u *UserRepoImpl) daoToDomain(user dao.User) domain.User {
+func (u *userRepoImpl) daoToDomain(user dao.User) domain.User {
 	return domain.User{
 		Id:       user.Id,
 		Email:    user.Email,
@@ -54,5 +54,5 @@ func (u *UserRepoImpl) daoToDomain(user dao.User) domain.User {
 }
 
 func NewUserRepoImpl(dao dao.UserDao) UserRepo {
-	return &UserRepoImpl{dao: dao}
+	return &userRepoImpl{dao: dao}
 }

@@ -19,15 +19,15 @@ type UserService interface {
 	Profile(ctx context.Context, id int64) (domain.User, error)
 }
 
-type UserServiceImpl struct {
+type userServiceImpl struct {
 	repo repository.UserRepo
 }
 
-func (u *UserServiceImpl) Profile(ctx context.Context, id int64) (domain.User, error) {
+func (u *userServiceImpl) Profile(ctx context.Context, id int64) (domain.User, error) {
 	return u.repo.FindById(ctx, id)
 }
 
-func (u *UserServiceImpl) Login(ctx context.Context, user domain.User) (domain.User, error) {
+func (u *userServiceImpl) Login(ctx context.Context, user domain.User) (domain.User, error) {
 	found, err := u.repo.FindByEmail(ctx, user.Email)
 	if err == repository.ErrUserNotFound {
 		return domain.User{}, ErrInvalidUserOrPassword
@@ -44,7 +44,7 @@ func (u *UserServiceImpl) Login(ctx context.Context, user domain.User) (domain.U
 	return found, nil
 }
 
-func (u *UserServiceImpl) SignUp(ctx context.Context, user domain.User) error {
+func (u *userServiceImpl) SignUp(ctx context.Context, user domain.User) error {
 	// 加密
 	password, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -55,7 +55,7 @@ func (u *UserServiceImpl) SignUp(ctx context.Context, user domain.User) error {
 }
 
 func NewUserServiceImpl(repo repository.UserRepo) UserService {
-	return &UserServiceImpl{
+	return &userServiceImpl{
 		repo: repo,
 	}
 }

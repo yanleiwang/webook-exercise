@@ -18,23 +18,23 @@ type UserDao interface {
 	FindById(ctx context.Context, id int64) (User, error)
 }
 
-type UserDaoGorm struct {
+type userDaoGorm struct {
 	db *gorm.DB
 }
 
-func (u *UserDaoGorm) FindById(ctx context.Context, id int64) (User, error) {
+func (u *userDaoGorm) FindById(ctx context.Context, id int64) (User, error) {
 	var user User
 	err := u.db.WithContext(ctx).Where("id = ?", id).First(&user).Error
 	return user, err
 }
 
-func (u *UserDaoGorm) FindByEmail(ctx context.Context, email string) (User, error) {
+func (u *userDaoGorm) FindByEmail(ctx context.Context, email string) (User, error) {
 	var user User
 	err := u.db.WithContext(ctx).Where("email = ?", email).First(&user).Error
 	return user, err
 }
 
-func (u *UserDaoGorm) Insert(ctx context.Context, user User) error {
+func (u *userDaoGorm) Insert(ctx context.Context, user User) error {
 	now := time.Now().UnixMilli()
 	user.Ctime = now
 	user.Utime = now
@@ -49,7 +49,7 @@ func (u *UserDaoGorm) Insert(ctx context.Context, user User) error {
 }
 
 func NewUserDaoGorm(db *gorm.DB) UserDao {
-	return &UserDaoGorm{db: db}
+	return &userDaoGorm{db: db}
 }
 
 type User struct {
