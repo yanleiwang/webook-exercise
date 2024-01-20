@@ -1,0 +1,13 @@
+apiVersion: v1  # 声明使用的 Kubernetes API 版本为 v1
+kind: Service  # 定义对象类型为 Service
+metadata:  # 定义 Service 对象的元数据
+  name: webook  # 设置 Service 对象的名称为 "webook"
+spec:  # 定义 Service 的具体规格
+  type: LoadBalancer  # 指定 Service 类型为 LoadBalancer，可以将外部流量负载均衡到多个 Pod 上
+  selector:  # 定义一个能够匹配到 Service 管理的 Pod 的 Label Selector
+    app: webook  # 匹配包含 "app=webook" 的标签
+  ports:  # 定义 Service 监听的端口列表
+    - protocol: TCP  # 指定使用的协议为 TCP
+      name: http  # 设置端口名称为 "http"
+      port: 8080  # 设置 Service 监听的端口号为 8080
+      targetPort: 8080  # 指定要将流量转发到哪个容器端口，这里为 8080

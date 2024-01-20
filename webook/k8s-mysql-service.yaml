@@ -1,0 +1,13 @@
+apiVersion: v1         # 使用的 Kubernetes API 版本
+kind: Service           # 对象类型为 Service
+metadata:              # 元数据定义
+  name: webook-mysql   # Service 的名称为 "webook-mysql"
+spec:                  # Service 的规格定义
+  selector:            # Pod 标签选择器
+    app: webook-mysql  # 匹配标签选择器，选择拥有 "app=webook-mysql" 标签的 Pod
+  ports:               # 端口定义列表
+    - protocol: TCP    # 网络协议为 TCP
+      port: 11309      # Service 监听的端口为 11309
+      targetPort: 3306 # 将请求转发到 Pod 的端口为 3306
+      nodePort: 30002  # 为 NodePort 类型的 Service 暴露的访问端口号为 30002
+  type: NodePort        # Service 类型为 NodePort

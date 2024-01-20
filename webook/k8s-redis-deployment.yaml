@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webook-redis
+  labels:
+    app: webook-redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webook-redis
+  template:
+    metadata:
+      name: webook-redis
+      labels:
+        app: webook-redis
+    spec:
+      containers:
+        - name: webook-redis
+          image: bitnami/redis:7.0.14
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: ALLOW_EMPTY_PASSWORD
+              value: "yes"
+      restartPolicy: Always
+      

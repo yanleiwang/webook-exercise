@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"gitee.com/geekbang/basic-go/webook/config"
 	"gitee.com/geekbang/basic-go/webook/internal/repository"
 	"gitee.com/geekbang/basic-go/webook/internal/repository/dao"
 	"gitee.com/geekbang/basic-go/webook/internal/service"
@@ -30,11 +31,12 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
+
 }
 
 func initRedis() redis.Cmdable {
 	return redis.NewClient(&redis.Options{
-		Addr:     "localhost:16379",
+		Addr:     config.Config.Redis.Addr,
 		Password: "", // 没有密码，默认值
 	})
 }
@@ -64,7 +66,7 @@ func initDB() *gorm.DB {
 				}
 			}
 	*/
-	db, err := gorm.Open(mysql.Open("root:root@tcp(localhost:13306)/webook"), &gorm.Config{
+	db, err := gorm.Open(mysql.Open(config.Config.DB.DSN), &gorm.Config{
 		TranslateError: true,
 	})
 

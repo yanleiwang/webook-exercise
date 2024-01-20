@@ -1,0 +1,19 @@
+# pvc => PersistentVolumeClaim
+apiVersion: v1                     # 使用的 Kubernetes API 版本
+kind: PersistentVolumeClaim        # 对象类型为 PersistentVolumeClaim
+metadata:                          # 元数据定义
+  name: webook-mysql-live-claim-v3 # 持久卷声明的名称为 "webook-mysql-live-claim-v3"
+spec:                              # 持久卷声明的规格定义
+  storageClassName: suibianv3      # 存储类名称为 "suibianv3"     这个可以随便
+  accessModes:                     # 访问模式定义   一个人？一个线程？还是一个POD？还是一个数据库用户？读写
+    - ReadWriteOnce                # 对于单个 Pod，读写访问模式
+    #    多个读，一个写
+    #    - ReadOnlyMany
+    #    - 多个读写
+    #    - ReadWriteMany
+  resources:                       # 资源定义
+    requests:                      # 请求资源定义
+      storage: 1Gi                 # 请求 1GB 的存储空间
+
+
+  

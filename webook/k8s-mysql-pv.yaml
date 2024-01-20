@@ -1,0 +1,17 @@
+# 创建了一个名为 "my-local-pv-v3" 的持久卷，使用了存储类 "suibianv3"
+# 并指定了容量大小为 1GB。此持久卷将在主机上的 "/mnt/live" 路径下创建一个目录，
+# 并且可以通过 PVC 与 Pod 进行绑定，以便在 Pod 中使用该持久卷。
+apiVersion: v1                    # 使用的 Kubernetes API 版本
+kind: PersistentVolume             # 对象类型为 PersistentVolume
+metadata:                          # 元数据定义
+  name: my-local-pv-v3             # 持久卷的名称为 "my-local-pv-v3"
+spec:                              # 持久卷的规格定义
+  storageClassName: suibianv3      # 存储类名称为 "suibianv3"
+  capacity:                        # 容量定义
+    storage: 1Gi                   # 容量大小为 1GB
+  accessModes:                     # 访问模式定义
+    - ReadWriteOnce                # 对于单个 Pod，读写访问模式
+  hostPath:                        # 主机路径定义
+    path: "/mnt/live"              # 指定主机上的路径为 "/mnt/live"
+
+  

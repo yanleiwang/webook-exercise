@@ -1,0 +1,22 @@
+apiVersion: apps/v1  # 声明使用的 Kubernetes API 版本为 apps/v1
+kind: Deployment  # 声明对象类型为 Deployment
+metadata:  # 定义 Deployment 对象的元数据
+  name: webook  # 设置 Deployment 对象的名称为 "webook"
+  labels:  # 为 Deployment 对象打上标签
+    app: webook  # 设置标签名称为 "app"，标签值为 "webook"
+spec:  # 定义 Deployment 的具体规格
+  replicas: 3  # 指定需要创建 3 个 Pod 实例
+  selector:  # 定义一个能够匹配到 Deployment 管理的 Pod 的 Label Selector
+    matchLabels:  # 标签选择器匹配条件
+      app: webook  # 匹配包含 "app=webook" 的标签
+  template:  # 定义创建 Pod 的模板
+    metadata:  # 定义 Pod 元数据
+      name: webook  # 设置模板生成的 Pod 的名称前缀为 "webook"
+      labels:  # 为 Pod 添加标签
+        app: webook  # 设置标签名称为 "app"，标签值为 "webook"，与 Deployment 对象的标签一致
+    spec:  # 定义 Pod 的具体规格
+      containers:  # 定义容器列表，可包含多个容器
+        - name: webook  # 给容器指定一个名称为 "webook"
+          image: webook:v0.0.1  # 指定容器使用的镜像，镜像名称为 "webook"，版本为 "v0.0.1"
+          imagePullPolicy: IfNotPresent  # 设置镜像拉取策略，如果本地已经存在该镜像，则不会重新拉取
+#      restartPolicy: Always  # 定义容器失败后如何重启。这里设置为 "Always"，表示在容器退出时总是重启它
