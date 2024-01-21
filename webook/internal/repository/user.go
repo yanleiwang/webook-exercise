@@ -2,6 +2,7 @@ package repository
 
 import (
 	"gitee.com/geekbang/basic-go/webook/internal/domain"
+	"gitee.com/geekbang/basic-go/webook/internal/repository/cache"
 	"gitee.com/geekbang/basic-go/webook/internal/repository/dao"
 	"golang.org/x/net/context"
 )
@@ -18,12 +19,28 @@ type UserRepo interface {
 }
 
 type userRepoImpl struct {
-	dao dao.UserDao
+	dao   dao.UserDao
+	cache cache.UserCache
 }
 
 func (u *userRepoImpl) FindById(ctx context.Context, id int64) (domain.User, error) {
-	user, err := u.dao.FindById(ctx, id)
-	return u.daoToDomain(user), err
+	user, err := u.cache.Get(ctx, id)
+	if err == nil {
+		return user, err
+	}
+	ue, err := u.dao.FindById(ctx, id)
+	if err != nil {
+		return domain.User{}, err
+	}
+	user = u.daoToDomain(ue)
+	go func() {
+		er := u.cache.Set(ctx, user)
+		if er != nil {
+			// 打日志 做监控
+		}
+	}()
+
+	return user, nil
 }
 
 func (u *userRepoImpl) FindByEmail(ctx context.Context, email string) (domain.User, error) {
@@ -53,6 +70,9 @@ func (u *userRepoImpl) daoToDomain(user dao.User) domain.User {
 	}
 }
 
-func NewUserRepoImpl(dao dao.UserDao) UserRepo {
-	return &userRepoImpl{dao: dao}
+func NewUserRepoImpl(dao dao.UserDao, cache cache.UserCache) UserRepo {
+	return &userRepoImpl{
+		dao:   dao,
+		cache: cache,
+	}
 }

@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"gitee.com/geekbang/basic-go/webook/config"
 	"gitee.com/geekbang/basic-go/webook/internal/repository"
+	"gitee.com/geekbang/basic-go/webook/internal/repository/cache"
 	"gitee.com/geekbang/basic-go/webook/internal/repository/dao"
 	"gitee.com/geekbang/basic-go/webook/internal/service"
 	"gitee.com/geekbang/basic-go/webook/internal/web"
 	"gitee.com/geekbang/basic-go/webook/internal/web/middlewares"
-	ratelimit2 "gitee.com/geekbang/basic-go/webook/pkg/ginx/middlewares/ratelimit"
-	"gitee.com/geekbang/basic-go/webook/pkg/utils/ratelimit"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/memstore"
@@ -22,11 +21,12 @@ import (
 )
 
 func main() {
-	redisCmd := initRedis()
-	engine := initWebServer(redisCmd)
+	rdb := initRedis()
+	engine := initWebServer(rdb)
 
 	db := initDB()
-	initUser(db, engine)
+	userHandler := initUser(db, rdb)
+	userHandler.RegisterHandlers(engine)
 	err := engine.Run(":8080")
 	if err != nil {
 		fmt.Println(err)
@@ -41,12 +41,14 @@ func initRedis() redis.Cmdable {
 	})
 }
 
-func initUser(db *gorm.DB, engine *gin.Engine) {
+func initUser(db *gorm.DB, cmdable redis.Cmdable) *web.UserHandler {
 	userDao := dao.NewUserDaoGorm(db)
-	userRepo := repository.NewUserRepoImpl(userDao)
+	userCache := cache.NewRedisUserCache(cmdable, time.Minute*15)
+	userRepo := repository.NewUserRepoImpl(userDao, userCache)
 	userSvc := service.NewUserServiceImpl(userRepo)
 	userHdl := web.NewUserHandler(userSvc)
-	userHdl.RegisterHandlers(engine)
+	return userHdl
+
 }
 
 func initDB() *gorm.DB {
@@ -110,7 +112,8 @@ func initWebServer(cmd redis.Cmdable) *gin.Engine {
 		IgnorePath("/users/login").Build())
 
 	// 限流  一分钟 20个 测试用
-	rateLimit := ratelimit.NewRedisSlideWindowLimiter(cmd, time.Minute, 20)
-	engine.Use(ratelimit2.NewBuilder(rateLimit).Build())
+	// 压测 取消限流
+	//rateLimit := ratelimit.NewRedisSlideWindowLimiter(cmd, time.Minute, 20)
+	//engine.Use(ratelimit2.NewBuilder(rateLimit).Build())
 	return engine
 }
