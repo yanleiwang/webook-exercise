@@ -7,6 +7,7 @@ import (
 	"gitee.com/geekbang/basic-go/webook/internal/repository/cache"
 	"gitee.com/geekbang/basic-go/webook/internal/repository/dao"
 	"gitee.com/geekbang/basic-go/webook/internal/service"
+	"gitee.com/geekbang/basic-go/webook/internal/service/sms/memory"
 	"gitee.com/geekbang/basic-go/webook/internal/web"
 	"gitee.com/geekbang/basic-go/webook/internal/web/middlewares"
 	"github.com/gin-contrib/cors"
@@ -46,7 +47,13 @@ func initUser(db *gorm.DB, cmdable redis.Cmdable) *web.UserHandler {
 	userCache := cache.NewRedisUserCache(cmdable, time.Minute*15)
 	userRepo := repository.NewUserRepoImpl(userDao, userCache)
 	userSvc := service.NewUserServiceImpl(userRepo)
-	userHdl := web.NewUserHandler(userSvc)
+
+	smsSvc := memory.NewService()
+	codeCache := cache.NewCodeCacheImpl(cmdable)
+	codeRepo := repository.NewCodeRepoImpl(codeCache)
+	codeSvc := service.NewCodeServiceImpl(smsSvc, codeRepo)
+
+	userHdl := web.NewUserHandler(userSvc, codeSvc)
 	return userHdl
 
 }
@@ -64,7 +71,7 @@ func initDB() *gorm.DB {
 			if me, ok := err.(*mysql.MySQLError); ok {
 				const uniqueIndexErrNo uint16 = 1062
 				if me.Number == uniqueIndexErrNo {
-					return ErrUserDuplicateEmail
+					return ErrUserDuplicate
 				}
 			}
 	*/

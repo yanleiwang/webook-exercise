@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	ErrUserDuplicateEmail    = repository.ErrUserDuplicateEmail
+	ErrUserDuplicate         = repository.ErrUserDuplicate
 	ErrInvalidUserOrPassword = errors.New("账号/邮箱或密码不对")
 )
 
@@ -17,18 +17,46 @@ type UserService interface {
 	SignUp(ctx context.Context, user domain.User) error
 	Login(ctx context.Context, user domain.User) (domain.User, error)
 	Profile(ctx context.Context, id int64) (domain.User, error)
+	FindOrCreate(ctx context.Context, phone string) (domain.User, error)
 }
 
 type userServiceImpl struct {
 	repo repository.UserRepo
 }
 
-func (u *userServiceImpl) Profile(ctx context.Context, id int64) (domain.User, error) {
-	return u.repo.FindById(ctx, id)
+func (svc *userServiceImpl) FindOrCreate(ctx context.Context, phone string) (domain.User, error) {
+	user, err := svc.repo.FindByPhone(ctx, phone)
+	// 要判断，有咩有这个用户
+	if err != repository.ErrUserNotFound {
+		// 绝大部分请求进来这里
+		// nil 会进来这里
+		// 不为 ErrUserNotFound 的也会进来这里
+		return user, err
+	}
+	// 在系统资源不足，触发降级之后，不执行慢路径了
+	//if ctx.Value("降级") == "true" {
+	//	return domain.User{}, errors.New("系统降级了")
+	//}
+	// 这个叫做慢路径
+	// 你明确知道，没有这个用户
+	user = domain.User{
+		Phone: phone,
+	}
+	err = svc.repo.Create(ctx, user)
+	if err != nil && err != repository.ErrUserDuplicate {
+		return user, err
+	}
+	// 因为这里会遇到主从延迟的问题
+	return svc.repo.FindByPhone(ctx, phone)
+
 }
 
-func (u *userServiceImpl) Login(ctx context.Context, user domain.User) (domain.User, error) {
-	found, err := u.repo.FindByEmail(ctx, user.Email)
+func (svc *userServiceImpl) Profile(ctx context.Context, id int64) (domain.User, error) {
+	return svc.repo.FindById(ctx, id)
+}
+
+func (svc *userServiceImpl) Login(ctx context.Context, user domain.User) (domain.User, error) {
+	found, err := svc.repo.FindByEmail(ctx, user.Email)
 	if err == repository.ErrUserNotFound {
 		return domain.User{}, ErrInvalidUserOrPassword
 	}
@@ -44,14 +72,14 @@ func (u *userServiceImpl) Login(ctx context.Context, user domain.User) (domain.U
 	return found, nil
 }
 
-func (u *userServiceImpl) SignUp(ctx context.Context, user domain.User) error {
+func (svc *userServiceImpl) SignUp(ctx context.Context, user domain.User) error {
 	// 加密
 	password, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
 	user.Password = string(password)
-	return u.repo.Create(ctx, user)
+	return svc.repo.Create(ctx, user)
 }
 
 func NewUserServiceImpl(repo repository.UserRepo) UserService {
