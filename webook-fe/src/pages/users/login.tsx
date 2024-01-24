@@ -53,8 +53,11 @@ const LoginForm: React.FC = () => (
             <Button type="primary" htmlType="submit">
                 登录
             </Button>
+            <Link href={"/users/login_sms"} >
+                &nbsp;&nbsp;手机号登录
+            </Link>
             <Link href={"/users/signup"} >
-                &nbsp;注册
+                &nbsp;&nbsp;注册
             </Link>
         </Form.Item>
     </Form>
