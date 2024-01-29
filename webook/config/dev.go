@@ -9,6 +9,6 @@ var Config = config{
 		DSN: "root:root@tcp(localhost:13306)/webook",
 	},
 	Redis: RedisConfig{
-		Addr: "localhost:6379",
+		Addr: "localhost:16379",
 	},
 }

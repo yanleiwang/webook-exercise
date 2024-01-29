@@ -40,6 +40,7 @@ func InitMiddlewares(redisClient redis.Cmdable) []gin.HandlerFunc {
 		middlewares.NewJWTLoginMiddlewareBuilder().
 			IgnorePath("/users/signup").
 			IgnorePath("/users/login").
+			IgnorePath("/users/login_sms/code/send").
 			IgnorePath("/users/login_sms").
 			IgnorePath("/users/login").Build(),
 		ratelimit.NewBuilder(ratelimit2.NewRedisSlideWindowLimiter(redisClient, time.Second, 100)).Build(),

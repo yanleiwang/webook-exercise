@@ -14,8 +14,8 @@ if ttl == -1 then
 elseif ttl == -2 or ttl < 540  then
     -- key 不存在 或者 过期时间  <  540 = 600 -60 = 9分钟
     -- 可以设置验证码
-    redis.call("set", key, code, "ex", expiration)
-    redis.call("set", keyCnt, maxCnt, "ex", expiration)
+    redis.call("set", key, code, "ex", 600)
+    redis.call("set", keyCnt, 3, "ex", 600)
     return 0
 else
     -- 发送太频繁
