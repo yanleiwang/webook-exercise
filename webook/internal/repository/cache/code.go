@@ -22,6 +22,7 @@ var (
 	ErrUnknownForCode         = errors.New("我也不知发生什么了，反正是跟 code 有关")
 )
 
+//go:generate mockgen -source=$GOFILE -destination=mocks/mock_$GOFILE --package=$GOPACKAGEmocks
 type CodeCache interface {
 	Set(ctx context.Context, biz string, phone string, code string) error
 	Verify(ctx context.Context, biz string, phone string, code string) (bool, error)

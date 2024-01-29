@@ -10,6 +10,7 @@ var (
 	ErrCodeVerifyTooManyTimes = cache.ErrCodeVerifyTooManyTimes
 )
 
+//go:generate mockgen -source=$GOFILE -destination=mocks/mock_$GOFILE --package=$GOPACKAGEmocks
 type CodeRepo interface {
 	Set(ctx context.Context, biz string, phone string, code string) error
 	Verify(ctx context.Context, biz string, phone string, code string) (bool, error)

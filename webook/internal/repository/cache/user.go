@@ -9,6 +9,9 @@ import (
 	"time"
 )
 
+//go:generate mockgen  -destination=redismocks/mock_redis_cmdable.gen.go -package=redismocks github.com/redis/go-redis/v9 Cmdable
+
+//go:generate mockgen -source=$GOFILE -destination=mocks/mock_$GOFILE --package=$GOPACKAGEmocks
 type UserCache interface {
 	Get(ctx context.Context, id int64) (domain.User, error)
 	Set(ctx context.Context, user domain.User) error
