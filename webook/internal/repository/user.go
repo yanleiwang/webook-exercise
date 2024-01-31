@@ -6,6 +6,7 @@ import (
 	"gitee.com/geekbang/basic-go/webook/internal/repository/cache"
 	"gitee.com/geekbang/basic-go/webook/internal/repository/dao"
 	"golang.org/x/net/context"
+	"time"
 )
 
 var (
@@ -19,11 +20,20 @@ type UserRepo interface {
 	FindByEmail(ctx context.Context, email string) (domain.User, error)
 	FindById(ctx context.Context, id int64) (domain.User, error)
 	FindByPhone(ctx context.Context, phone string) (domain.User, error)
+	FindByWechat(ctx context.Context, openID string) (domain.User, error)
 }
 
 type userRepoImpl struct {
 	dao   dao.UserDao
 	cache cache.UserCache
+}
+
+func (u *userRepoImpl) FindByWechat(ctx context.Context, openID string) (domain.User, error) {
+	user, err := u.dao.FindByWechat(ctx, openID)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return u.daoToDomain(user), err
 }
 
 func (u *userRepoImpl) FindByPhone(ctx context.Context, phone string) (domain.User, error) {
@@ -78,6 +88,14 @@ func (u *userRepoImpl) domainToDao(user domain.User) dao.User {
 			Valid:  user.Phone != "",
 		},
 		Password: user.Password,
+		WechatUnionID: sql.NullString{
+			String: user.WechatInfo.UnionID,
+			Valid:  user.WechatInfo.UnionID != "",
+		},
+		WechatOpenID: sql.NullString{
+			String: user.WechatInfo.OpenID,
+			Valid:  user.WechatInfo.OpenID != "",
+		},
 	}
 }
 
@@ -87,6 +105,11 @@ func (u *userRepoImpl) daoToDomain(user dao.User) domain.User {
 		Email:    user.Email.String,
 		Phone:    user.Phone.String,
 		Password: user.Password,
+		WechatInfo: domain.WechatInfo{
+			UnionID: user.WechatUnionID.String,
+			OpenID:  user.WechatOpenID.String,
+		},
+		Ctime: time.UnixMilli(user.Ctime),
 	}
 }
 

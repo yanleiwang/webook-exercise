@@ -30,7 +30,10 @@ func InitWebServer() *gin.Engine {
 	codeCache := cache.NewCodeCacheImpl(cmdable)
 	codeRepo := repository.NewCodeRepoImpl(codeCache)
 	codeService := service.NewCodeServiceImpl(smsService, codeRepo)
-	userHandler := web.NewUserHandler(userService, codeService)
-	engine := ioc.InitWebServer(v, userHandler)
+	jwtHandler := web.NewJWTHandler()
+	userHandler := web.NewUserHandler(userService, codeService, jwtHandler)
+	wechatService := ioc.InitWechatService()
+	oAuth2WechatHandler := web.NewOAuth2WechatHandler(wechatService, userService, jwtHandler)
+	engine := ioc.InitWebServer(v, userHandler, oAuth2WechatHandler)
 	return engine
 }

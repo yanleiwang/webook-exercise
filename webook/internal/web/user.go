@@ -6,9 +6,7 @@ import (
 	"gitee.com/geekbang/basic-go/webook/internal/web/middlewares"
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"net/http"
-	"time"
 )
 
 const biz = "login"
@@ -20,9 +18,10 @@ type UserHandler struct {
 	codeSvc     service.CodeService
 	emailExp    *regexp.Regexp
 	passwordExp *regexp.Regexp
+	*JWTHandler
 }
 
-func NewUserHandler(svc service.UserService, codeService service.CodeService) *UserHandler {
+func NewUserHandler(svc service.UserService, codeService service.CodeService, jwtHdl *JWTHandler) *UserHandler {
 	const (
 		emailRegexPattern    = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$"
 		passwordRegexPattern = `^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$`
@@ -36,6 +35,7 @@ func NewUserHandler(svc service.UserService, codeService service.CodeService) *U
 		codeSvc:     codeService,
 		emailExp:    emailExp,
 		passwordExp: passwordExp,
+		JWTHandler:  jwtHdl,
 	}
 }
 
@@ -194,7 +194,7 @@ func (u *UserHandler) LoginJWT(ctx *gin.Context) {
 		return
 	}
 
-	if err = u.setJWTToken(ctx, user.Id); err != nil {
+	if err = u.setLoginToken(ctx, user.Id); err != nil {
 		ctx.String(http.StatusOK, "系统错误")
 		return
 	}
@@ -207,13 +207,13 @@ func (u *UserHandler) ProfileJWT(ctx *gin.Context) {
 	}
 
 	value, exist := ctx.Get(middlewares.KeyUserClaims)
-	token, ok := value.(middlewares.UserClaims)
+	token, ok := value.(UserClaims)
 	if !exist || !ok {
 		ctx.String(http.StatusOK, "系统错误")
 		return
 	}
 
-	user, err := u.svc.Profile(ctx, token.Id)
+	user, err := u.svc.Profile(ctx, token.Uid)
 	if err != nil {
 		// 按照道理来说，这边 id 对应的数据肯定存在，所以要是没找到，
 		// 那就说明是系统出了问题。
@@ -306,7 +306,7 @@ func (u *UserHandler) LoginSMS(ctx *gin.Context) {
 
 	// 这边要怎么办呢？
 	// 从哪来？
-	if err = u.setJWTToken(ctx, user.Id); err != nil {
+	if err = u.setLoginToken(ctx, user.Id); err != nil {
 		ctx.JSON(http.StatusOK, Result{
 			Code: 5,
 			Msg:  "系统错误",
@@ -317,21 +317,4 @@ func (u *UserHandler) LoginSMS(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, Result{
 		Msg: "验证码校验通过",
 	})
-}
-
-func (u *UserHandler) setJWTToken(ctx *gin.Context, id int64) error {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, middlewares.UserClaims{
-		Id:        id,
-		UserAgent: ctx.Request.UserAgent(),
-		RegisteredClaims: jwt.RegisteredClaims{
-			// 演示目的设置为一分钟过期
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
-		},
-	})
-	tokenStr, err := token.SignedString(middlewares.JWTKey)
-	if err != nil {
-		return err
-	}
-	ctx.Header("x-jwt-token", tokenStr)
-	return nil
 }

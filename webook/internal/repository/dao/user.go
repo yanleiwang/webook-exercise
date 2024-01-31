@@ -19,10 +19,17 @@ type UserDao interface {
 	FindByEmail(ctx context.Context, email string) (User, error)
 	FindById(ctx context.Context, id int64) (User, error)
 	FindByPhone(ctx context.Context, phone string) (User, error)
+	FindByWechat(ctx context.Context, id string) (User, error)
 }
 
 type userDaoGorm struct {
 	db *gorm.DB
+}
+
+func (u *userDaoGorm) FindByWechat(ctx context.Context, openID string) (User, error) {
+	var user User
+	err := u.db.WithContext(ctx).Where("wechat_open_id = ?", openID).First(&user).Error
+	return user, err
 }
 
 func (u *userDaoGorm) FindByPhone(ctx context.Context, phone string) (User, error) {
@@ -74,6 +81,12 @@ type User struct {
 	Email    sql.NullString `gorm:"unique"`
 	Phone    sql.NullString `gorm:"unique"`
 	Password string
-	Ctime    int64
-	Utime    int64
+
+	WechatUnionID sql.NullString
+	WechatOpenID  sql.NullString `gorm:"unique"`
+
+	// 创建时间，毫秒数
+	Ctime int64
+	// 更新时间，毫秒数
+	Utime int64
 }

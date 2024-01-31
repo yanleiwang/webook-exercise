@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"gitee.com/geekbang/basic-go/webook/internal/web"
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -51,9 +52,9 @@ func (j *JWTLoginMiddlewareBuilder) Build() gin.HandlerFunc {
 		}
 
 		tokenStr := authSegments[1]
-		uc := UserClaims{}
-		token, err := jwt.ParseWithClaims(tokenStr, &uc, func(token *jwt.Token) (interface{}, error) {
-			return JWTKey, nil
+		uc := &web.UserClaims{}
+		token, err := jwt.ParseWithClaims(tokenStr, uc, func(token *jwt.Token) (interface{}, error) {
+			return web.JWTKey, nil
 		})
 		if err != nil || !token.Valid {
 			// 不正确的 token
@@ -82,7 +83,7 @@ func (j *JWTLoginMiddlewareBuilder) Build() gin.HandlerFunc {
 		// 每 10 秒刷新一次
 		if expireTime.Sub(time.Now()) < time.Second*50 {
 			uc.ExpiresAt = jwt.NewNumericDate(time.Now().Add(time.Minute))
-			newToken, err := token.SignedString(JWTKey)
+			newToken, err := token.SignedString(web.JWTKey)
 			if err != nil {
 				// 因为刷新这个事情，并不是一定要做的，所以这里可以考虑打印日志
 				// 暂时这样打印
