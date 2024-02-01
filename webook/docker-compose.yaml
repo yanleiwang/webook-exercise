@@ -21,3 +21,11 @@ services:
       - ALLOW_EMPTY_PASSWORD=yes
     ports:
       - '16379:6379'
+
+  etcd:
+    image: 'bitnami/etcd:latest'
+    environment:
+      - ALLOW_NONE_AUTHENTICATION=yes
+    ports:
+      #      所以你要用 12379 端口来连接 etcd
+      - 12379:2379
