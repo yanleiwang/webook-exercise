@@ -8,6 +8,7 @@ import (
 	"gitee.com/geekbang/basic-go/webook/internal/repository/dao"
 	"gitee.com/geekbang/basic-go/webook/internal/service"
 	"gitee.com/geekbang/basic-go/webook/internal/web"
+	"gitee.com/geekbang/basic-go/webook/internal/web/jwt"
 	"gitee.com/geekbang/basic-go/webook/ioc"
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
@@ -15,9 +16,9 @@ import (
 
 func InitWebServer() *gin.Engine {
 	wire.Build(
-		// 第三方依赖
+		// 第三方依赖:
 		ioc.InitDB, ioc.InitRedis,
-		web.NewJWTHandler,
+		jwt.NewJWTHandler,
 
 		//user
 		dao.NewUserDaoGorm, cache.NewRedisUserCache,

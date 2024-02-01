@@ -2,6 +2,7 @@ package ioc
 
 import (
 	"gitee.com/geekbang/basic-go/webook/internal/web"
+	"gitee.com/geekbang/basic-go/webook/internal/web/jwt"
 	"gitee.com/geekbang/basic-go/webook/internal/web/middlewares"
 	"gitee.com/geekbang/basic-go/webook/pkg/ginx/middlewares/ratelimit"
 	ratelimit2 "gitee.com/geekbang/basic-go/webook/pkg/utils/ratelimit"
@@ -23,7 +24,7 @@ func InitWebServer(mdls []gin.HandlerFunc,
 	return server
 }
 
-func InitMiddlewares(redisClient redis.Cmdable) []gin.HandlerFunc {
+func InitMiddlewares(redisClient redis.Cmdable, jwtHdl jwt.Handler) []gin.HandlerFunc {
 
 	// session + cookie 登录校验
 	//store, _ := redis.NewStore(10, "tcp", "localhost:16379", "",
@@ -41,12 +42,13 @@ func InitMiddlewares(redisClient redis.Cmdable) []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		corsHdl(),
 		// jwt 登录校验
-		middlewares.NewJWTLoginMiddlewareBuilder().
+		middlewares.NewJWTLoginMiddlewareBuilder(jwtHdl).
 			IgnorePath("/users/signup").
 			IgnorePath("/users/login").
 			IgnorePath("/users/login_sms/code/send").
 			IgnorePath("/users/login_sms").
 			IgnorePath("/users/login").
+			IgnorePath("users/refresh_token").
 			IgnorePath("/oauth2/wechat/authurl").
 			IgnorePath("/oauth2/wechat/callback").Build(),
 		ratelimit.NewBuilder(ratelimit2.NewRedisSlideWindowLimiter(redisClient, time.Second, 100)).Build(),
@@ -58,9 +60,9 @@ func corsHdl() gin.HandlerFunc {
 		AllowOriginFunc: func(origin string) bool { //  哪些来源的url是被允许的
 			return strings.HasPrefix(origin, "http://localhost")
 		},
-		AllowHeaders:     []string{"Content-Type", "Authorization"}, // 跨域请求能带上哪些header
-		AllowCredentials: true,                                      // 是否允许带cookie
-		ExposeHeaders:    []string{"x-jwt-token"},                   // 前端除了 normal header 还能拿到哪些响应header
-		MaxAge:           12 * time.Hour,                            // preflight响应 过期时间
+		AllowHeaders:     []string{"Content-Type", "Authorization"},  // 跨域请求能带上哪些header
+		AllowCredentials: true,                                       // 是否允许带cookie
+		ExposeHeaders:    []string{"x-jwt-token", "x-refresh-token"}, // 前端除了 normal header 还能拿到哪些响应header
+		MaxAge:           12 * time.Hour,                             // preflight响应 过期时间
 	})
 }

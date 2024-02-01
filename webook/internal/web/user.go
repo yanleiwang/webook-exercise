@@ -3,10 +3,12 @@ package web
 import (
 	"gitee.com/geekbang/basic-go/webook/internal/domain"
 	"gitee.com/geekbang/basic-go/webook/internal/service"
+	"gitee.com/geekbang/basic-go/webook/internal/web/jwt"
 	"gitee.com/geekbang/basic-go/webook/internal/web/middlewares"
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"time"
 )
 
 const biz = "login"
@@ -18,10 +20,10 @@ type UserHandler struct {
 	codeSvc     service.CodeService
 	emailExp    *regexp.Regexp
 	passwordExp *regexp.Regexp
-	*JWTHandler
+	jwt.Handler
 }
 
-func NewUserHandler(svc service.UserService, codeService service.CodeService, jwtHdl *JWTHandler) *UserHandler {
+func NewUserHandler(svc service.UserService, codeService service.CodeService, jwtHdl jwt.Handler) *UserHandler {
 	const (
 		emailRegexPattern    = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$"
 		passwordRegexPattern = `^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$`
@@ -35,7 +37,7 @@ func NewUserHandler(svc service.UserService, codeService service.CodeService, jw
 		codeSvc:     codeService,
 		emailExp:    emailExp,
 		passwordExp: passwordExp,
-		JWTHandler:  jwtHdl,
+		Handler:     jwtHdl,
 	}
 }
 
@@ -51,7 +53,8 @@ func (u *UserHandler) RegisterHandlers(engine *gin.Engine) {
 	//ug.POST("/edit", u.Edit)
 	ug.POST("/login_sms/code/send", u.SendLoginSMSCode)
 	ug.POST("/login_sms", u.LoginSMS)
-
+	ug.POST("/refresh_token", u.RefreshToken)
+	ug.POST("/logout", u.LogoutJWT)
 }
 
 func (u *UserHandler) SignUp(ctx *gin.Context) {
@@ -194,7 +197,7 @@ func (u *UserHandler) LoginJWT(ctx *gin.Context) {
 		return
 	}
 
-	if err = u.setLoginToken(ctx, user.Id); err != nil {
+	if err = u.SetLoginToken(ctx, user.Id); err != nil {
 		ctx.String(http.StatusOK, "系统错误")
 		return
 	}
@@ -206,14 +209,13 @@ func (u *UserHandler) ProfileJWT(ctx *gin.Context) {
 		Email string `json:"email"`
 	}
 
-	value, exist := ctx.Get(middlewares.KeyUserClaims)
-	token, ok := value.(UserClaims)
-	if !exist || !ok {
+	claims, ok := ctx.MustGet(jwt.KeyUserClaims).(*jwt.AccessClaims)
+	if !ok {
 		ctx.String(http.StatusOK, "系统错误")
 		return
 	}
 
-	user, err := u.svc.Profile(ctx, token.Uid)
+	user, err := u.svc.Profile(ctx, claims.Uid)
 	if err != nil {
 		// 按照道理来说，这边 id 对应的数据肯定存在，所以要是没找到，
 		// 那就说明是系统出了问题。
@@ -306,7 +308,7 @@ func (u *UserHandler) LoginSMS(ctx *gin.Context) {
 
 	// 这边要怎么办呢？
 	// 从哪来？
-	if err = u.setLoginToken(ctx, user.Id); err != nil {
+	if err = u.SetLoginToken(ctx, user.Id); err != nil {
 		ctx.JSON(http.StatusOK, Result{
 			Code: 5,
 			Msg:  "系统错误",
@@ -316,5 +318,48 @@ func (u *UserHandler) LoginSMS(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, Result{
 		Msg: "验证码校验通过",
+	})
+}
+
+func (u *UserHandler) RefreshToken(ctx *gin.Context) {
+	claims, err := u.ExtractRefreshClaims(ctx)
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	expirationTime, err := claims.GetExpirationTime()
+	if err != nil || expirationTime.Before(time.Now()) {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	err = u.CheckSession(ctx, claims.Ssid)
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	// 搞个新的 access_token
+	err = u.SetAccessToken(ctx, claims.Uid, claims.Ssid)
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	ctx.JSON(http.StatusOK, Result{
+		Msg: "刷新成功",
+	})
+}
+
+func (u *UserHandler) LogoutJWT(ctx *gin.Context) {
+	err := u.ClearToken(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "退出登录失败",
+		})
+		return
+	}
+	ctx.JSON(http.StatusOK, Result{
+		Msg: "退出登录OK",
 	})
 }
