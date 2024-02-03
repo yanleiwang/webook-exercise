@@ -1,14 +1,19 @@
 package ioc
 
 import (
+	"context"
 	"gitee.com/geekbang/basic-go/webook/internal/web"
 	"gitee.com/geekbang/basic-go/webook/internal/web/jwt"
 	"gitee.com/geekbang/basic-go/webook/internal/web/middlewares"
+	logger2 "gitee.com/geekbang/basic-go/webook/pkg/ginx/middlewares/logger"
 	"gitee.com/geekbang/basic-go/webook/pkg/ginx/middlewares/ratelimit"
+	"gitee.com/geekbang/basic-go/webook/pkg/logger"
 	ratelimit2 "gitee.com/geekbang/basic-go/webook/pkg/utils/ratelimit"
+	"github.com/fsnotify/fsnotify"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	"github.com/spf13/viper"
 	"strings"
 	"time"
 )
@@ -24,23 +29,19 @@ func InitWebServer(mdls []gin.HandlerFunc,
 	return server
 }
 
-func InitMiddlewares(redisClient redis.Cmdable, jwtHdl jwt.Handler) []gin.HandlerFunc {
+func InitMiddlewares(redisClient redis.Cmdable, jwtHdl jwt.Handler, log logger.Logger) []gin.HandlerFunc {
 
-	// session + cookie 登录校验
-	//store, _ := redis.NewStore(10, "tcp", "localhost:16379", "",
-	//	[]byte("pY8tX3vY7aT8nK2nD6lO9jR4pE5aN4gI"), []byte("rM8eL5rB7pC1fZ4tZ3eT1fM8cS5kK7lD"))
-	//engine.Use(sessions.Sessions("mysession", store))
-	//
-	//engine.Use(middlewares.NewSessionLoginBuilder(time.Minute, time.Second*10).
-	//	IgnorePath("/users/signup").
-	//	IgnorePath("/users/login").Build())
-
-	// session
-	//store := memstore.NewStore([]byte("pY8tX3vY7aT8nK2nD6lO9jR4pE5aN4gI"), []byte("rM8eL5rB7pC1fZ4tZ3eT1fM8cS5kK7lD"))
-	//engine.Use(sessions.Sessions("mysession", store))
+	bd := logger2.NewBuilder(func(ctx context.Context, al *logger2.AccessLog) {
+		log.Debug("HTTP请求", logger.Field{Key: "al", Value: al})
+	}).AllowReqBody(true).AllowRespBody()
+	viper.OnConfigChange(func(in fsnotify.Event) {
+		ok := viper.GetBool("web.logreq")
+		bd.AllowReqBody(ok)
+	})
 
 	return []gin.HandlerFunc{
 		corsHdl(),
+		bd.Build(),
 		// jwt 登录校验
 		middlewares.NewJWTLoginMiddlewareBuilder(jwtHdl).
 			IgnorePath("/users/signup").

@@ -5,6 +5,7 @@ import (
 	"gitee.com/geekbang/basic-go/webook/internal/service"
 	"gitee.com/geekbang/basic-go/webook/internal/web/jwt"
 	"gitee.com/geekbang/basic-go/webook/internal/web/middlewares"
+	"gitee.com/geekbang/basic-go/webook/pkg/logger"
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -21,9 +22,10 @@ type UserHandler struct {
 	emailExp    *regexp.Regexp
 	passwordExp *regexp.Regexp
 	jwt.Handler
+	log logger.Logger
 }
 
-func NewUserHandler(svc service.UserService, codeService service.CodeService, jwtHdl jwt.Handler) *UserHandler {
+func NewUserHandler(svc service.UserService, codeService service.CodeService, jwtHdl jwt.Handler, log logger.Logger) *UserHandler {
 	const (
 		emailRegexPattern    = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$"
 		passwordRegexPattern = `^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$`
@@ -38,6 +40,7 @@ func NewUserHandler(svc service.UserService, codeService service.CodeService, jw
 		emailExp:    emailExp,
 		passwordExp: passwordExp,
 		Handler:     jwtHdl,
+		log:         log,
 	}
 }
 
@@ -86,7 +89,7 @@ func (u *UserHandler) SignUp(ctx *gin.Context) {
 
 	ok, err = u.passwordExp.MatchString(req.Password)
 	if err != nil {
-		// TODO 日志
+		u.log.Error("密码 正则匹配 失败", logger.Error(err))
 		ctx.String(http.StatusOK, "系统错误")
 		return
 	}
@@ -103,13 +106,14 @@ func (u *UserHandler) SignUp(ctx *gin.Context) {
 
 	switch err {
 	case service.ErrUserDuplicate:
+		u.log.Info("重复注册")
 		ctx.String(http.StatusOK, "手机/邮箱已注册")
 		return
 	case nil:
 		ctx.String(http.StatusOK, "注册成功")
 		return
 	default:
-		//TODO 日志
+		u.log.Error("用户注册失败", logger.Error(err))
 		ctx.String(http.StatusOK, "系统错误")
 	}
 

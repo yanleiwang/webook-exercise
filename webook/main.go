@@ -21,6 +21,12 @@ func initViper() {
 	cfile := pflag.String("config",
 		"config/config.yaml", "指定配置文件路径")
 
+	type Config struct {
+		name     string `yaml:"name"`
+		addr     string `yaml:"addr"`
+		password string `yaml:"password"`
+	}
+
 	pflag.Parse()
 	viper.SetConfigFile(*cfile)
 
