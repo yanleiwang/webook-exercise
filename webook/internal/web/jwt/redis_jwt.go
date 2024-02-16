@@ -30,7 +30,7 @@ func NewJWTHandler(cmd redis.Cmdable) Handler {
 func (j *JWTHandler) ClearToken(ctx *gin.Context) error {
 	ctx.Header("x-jwt-token", "")
 	ctx.Header("x-refresh-token", "")
-	claims := ctx.MustGet(KeyUserClaims).(*AccessClaims)
+	claims := ctx.MustGet(KeyAccessClaims).(*AccessClaims)
 	return j.cmd.Set(ctx, j.getRedisKey(claims.Ssid), "", time.Hour*24*7).Err()
 }
 
@@ -149,5 +149,5 @@ func (j *JWTHandler) extractTokenStr(ctx *gin.Context) string {
 }
 
 const (
-	KeyUserClaims = "userClaims"
+	KeyAccessClaims = "AccessClaims"
 )

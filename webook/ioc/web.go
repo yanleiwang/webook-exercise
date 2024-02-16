@@ -20,12 +20,14 @@ import (
 
 func InitWebServer(mdls []gin.HandlerFunc,
 	userHdl *web.UserHandler,
-	oauth2WechatHdl *web.OAuth2WechatHandler) *gin.Engine {
+	oauth2WechatHdl *web.OAuth2WechatHandler,
+	artHdl *web.ArticleHandler) *gin.Engine {
 
 	server := gin.Default()
 	server.Use(mdls...)
 	userHdl.RegisterHandlers(server)
 	oauth2WechatHdl.RegisterHandlers(server)
+	artHdl.RegisterHandlers(server)
 	return server
 }
 

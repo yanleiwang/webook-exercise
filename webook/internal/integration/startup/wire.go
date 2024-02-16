@@ -1,6 +1,6 @@
 //go:build wireinject
 
-package main
+package startup
 
 import (
 	"gitee.com/geekbang/basic-go/webook/internal/repository"
@@ -15,7 +15,7 @@ import (
 	"github.com/google/wire"
 )
 
-var thirdProvider = wire.NewSet(ioc.InitDB, ioc.InitRedis, ioc.InitLogger, jwt.NewJWTHandler)
+var thirdProvider = wire.NewSet(InitDB, InitRedis, ioc.InitLogger, jwt.NewJWTHandler)
 var userSvcProvider = wire.NewSet(
 	dao.NewUserDaoGorm,
 	cache.NewRedisUserCache,
@@ -60,4 +60,15 @@ func InitWebServer() *gin.Engine {
 		ioc.InitWebServer,
 	)
 	return &gin.Engine{}
+}
+
+func InitArticleHandler() *web.ArticleHandler {
+	wire.Build(
+		thirdProvider,
+		articleSvcProvider,
+		userSvcProvider,
+		web.NewArticleHandler,
+	)
+
+	return new(web.ArticleHandler)
 }

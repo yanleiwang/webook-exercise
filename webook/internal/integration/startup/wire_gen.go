@@ -4,7 +4,7 @@
 //go:build !wireinject
 // +build !wireinject
 
-package main
+package startup
 
 import (
 	"gitee.com/geekbang/basic-go/webook/internal/repository"
@@ -22,12 +22,12 @@ import (
 // Injectors from wire.go:
 
 func InitWebServer() *gin.Engine {
-	cmdable := ioc.InitRedis()
+	cmdable := InitRedis()
 	handler := jwt.NewJWTHandler(cmdable)
 	logger := ioc.InitLogger()
 	v := ioc.InitMiddlewares(cmdable, handler, logger)
-	db := ioc.InitDB(logger)
-	userDao := dao.NewUserDaoGorm(db)
+	gormDB := InitDB()
+	userDao := dao.NewUserDaoGorm(gormDB)
 	userCache := cache.NewRedisUserCache(cmdable)
 	userRepo := repository.NewUserRepoImpl(userDao, userCache)
 	userService := service.NewUserServiceImpl(userRepo)
@@ -38,7 +38,7 @@ func InitWebServer() *gin.Engine {
 	userHandler := web.NewUserHandler(userService, codeService, handler, logger)
 	wechatService := ioc.InitWechatService()
 	oAuth2WechatHandler := web.NewOAuth2WechatHandler(wechatService, userService, handler)
-	articleDao := article.NewArticleDaoGORM(db)
+	articleDao := article.NewArticleDaoGORM(gormDB)
 	articleCache := cache.NewRedisArticleCache(cmdable)
 	articleRepository := repository.NewArticleRepository(articleDao, articleCache, logger, userRepo)
 	articleService := service.NewArticleService(articleRepository, logger)
@@ -47,9 +47,24 @@ func InitWebServer() *gin.Engine {
 	return engine
 }
 
+func InitArticleHandler() *web.ArticleHandler {
+	gormDB := InitDB()
+	articleDao := article.NewArticleDaoGORM(gormDB)
+	cmdable := InitRedis()
+	articleCache := cache.NewRedisArticleCache(cmdable)
+	logger := ioc.InitLogger()
+	userDao := dao.NewUserDaoGorm(gormDB)
+	userCache := cache.NewRedisUserCache(cmdable)
+	userRepo := repository.NewUserRepoImpl(userDao, userCache)
+	articleRepository := repository.NewArticleRepository(articleDao, articleCache, logger, userRepo)
+	articleService := service.NewArticleService(articleRepository, logger)
+	articleHandler := web.NewArticleHandler(articleService, logger)
+	return articleHandler
+}
+
 // wire.go:
 
-var thirdProvider = wire.NewSet(ioc.InitDB, ioc.InitRedis, ioc.InitLogger, jwt.NewJWTHandler)
+var thirdProvider = wire.NewSet(InitDB, InitRedis, ioc.InitLogger, jwt.NewJWTHandler)
 
 var userSvcProvider = wire.NewSet(dao.NewUserDaoGorm, cache.NewRedisUserCache, repository.NewUserRepoImpl, service.NewUserServiceImpl)
 

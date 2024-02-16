@@ -64,7 +64,7 @@ func (j *JWTLoginMiddlewareBuilder) Build() gin.HandlerFunc {
 
 		// 说明 token 是合法的
 		// 我们把这个 token 里面的数据放到 ctx 里面，后面用的时候就不用再次 Parse 了
-		ctx.Set(ijwt.KeyUserClaims, &uc)
+		ctx.Set(ijwt.KeyAccessClaims, &uc)
 
 	}
 }

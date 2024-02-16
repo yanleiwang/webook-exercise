@@ -213,7 +213,7 @@ func (u *UserHandler) ProfileJWT(ctx *gin.Context) {
 		Email string `json:"email"`
 	}
 
-	claims, ok := ctx.MustGet(jwt.KeyUserClaims).(*jwt.AccessClaims)
+	claims, ok := ctx.MustGet(jwt.KeyAccessClaims).(*jwt.AccessClaims)
 	if !ok {
 		ctx.String(http.StatusOK, "系统错误")
 		return

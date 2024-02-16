@@ -19,7 +19,7 @@ func main() {
 
 func initViper() {
 	cfile := pflag.String("config",
-		"config/config.yaml", "指定配置文件路径")
+		"config/dev.yaml", "指定配置文件路径")
 
 	type Config struct {
 		name     string `yaml:"name"`
